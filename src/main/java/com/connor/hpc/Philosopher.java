@@ -3,13 +3,11 @@ package com.connor.hpc;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class Philosopher extends Thread {
-    private Thread t;
+    private Thread thread;
     private String name;
     private DiningTable table;
     private int seatNumber;
     private boolean hasEaten = false;
-    private boolean leftFork = false;
-    private boolean rightFork = false;
 
     private enum Direction {
         LEFT,
@@ -24,14 +22,13 @@ public class Philosopher extends Thread {
     }
 
     public void run() {
-        try {
-            pickupLeft();
-            sleep(1000);
-            pickupRight();
+        try{
+            pickUp(Direction.LEFT);
+            pickUp(Direction.RIGHT);
             eat();
-            putDownLeft();
-            putDownRight();
-            
+            putDown(Direction.LEFT);
+            putDown(Direction.RIGHT);
+            leaveTable();
         } catch(Exception e) {
             System.out.println(String.format("error - %s",e.toString()));
         }
@@ -45,42 +42,44 @@ public class Philosopher extends Thread {
         }
     }
 
-    // diningTable.forks[i]
-    private void pickupLeft() {
-        accessFork(Direction.LEFT).lock();
-        System.out.println(String.format("fork to left of %s is picked up",name));
-        // if left not taken, pickup otherwise nothing
-    }
-    // diningTable.forks[i+1] 
-    private void pickupRight() {
-        accessFork(Direction.RIGHT).lock();
-        System.out.println(String.format("fork to right of %s is picked up",name));
+    private void leaveTable() {
+        System.out.println(String.format("%s left the table", name));
     }
 
-    //
-    private void putDownLeft() {
-        accessFork(Direction.LEFT).unlock();
-        System.out.println(String.format("fork to left of %s is put down",name));
-    }
-
-    //
-    private void putDownRight() {
-        accessFork(Direction.RIGHT).unlock();
-        System.out.println(String.format("fork to right of %s is put down",name));
-    }
-
-    private void eat() {
-        if (table.forks[(seatNumber + 1) % 5].isHeldByCurrentThread() && table.forks[seatNumber].isHeldByCurrentThread()) {
-            hasEaten = true;
-            System.out.println(String.format("%s ate dinner",name));
+    private void pickUp(Direction direction) {
+        try {
+            while (true) {
+                if (accessFork(direction).getHoldCount() == 0) {
+                accessFork(direction).lock();
+                System.out.println(String.format("fork to %s of %s is picked up",direction.toString(),name));
+                Thread.sleep(100);
+                } 
+                if (Thread.interrupted()) {
+                    System.exit(1);
+                }
+            }
+        } catch (Exception e) {
         }
     }
 
+    private void putDown(Direction direction) throws InterruptedException {
+        accessFork(direction).unlock();
+        System.out.println(String.format("fork to %s of %s is put down",direction.toString(),name));
+        Thread.sleep(100);
+    }
+
+    private void eat() throws InterruptedException {
+        if (accessFork(Direction.LEFT).isHeldByCurrentThread() && accessFork(Direction.RIGHT).isHeldByCurrentThread()) {
+            hasEaten = true;
+            System.out.println(String.format("%s ate dinner",name));
+            Thread.sleep(1000);
+        }
+    }
 
     public void start() {
-        if (t == null) { 
-            t = new Thread(this, name);
-            t.start();
+        if (thread == null) { 
+            thread = new Thread(this, name);
+            thread.start();
         }
     }
 

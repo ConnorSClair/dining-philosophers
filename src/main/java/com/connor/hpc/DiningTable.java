@@ -9,7 +9,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class DiningTable {
     ReentrantLock[] forks = new ReentrantLock[5];
-    boolean dinnerTime = True;
+    boolean dinnerTime = true;
     public DiningTable() {
         for (int i = 0; i < forks.length; i++) {
             forks[i] = new ReentrantLock();
